@@ -5,7 +5,7 @@ UBlox binary protocol handling
 Copyright Andrew Tridgell, October 2012
 Released under GNU GPL version 3 or later
 '''
-
+import sys
 import struct
 from datetime import datetime
 import time, os
@@ -203,9 +203,9 @@ class UBloxDescriptor:
         self.count_field = count_field
         self.format2 = format2
         self.fields2 = fields2
-	
+
     def unpack(self, msg):
-	'''unpack a UBloxMessage, creating the .fields and ._recs attributes in msg'''
+        '''unpack a UBloxMessage, creating the .fields and ._recs attributes in msg'''
         msg._fields = {}
 
         # unpack main message blocks. A comm
@@ -214,7 +214,7 @@ class UBloxDescriptor:
         count = 0
         msg._recs = []
         fields = self.fields[:]
-        
+
         for fmt in formats:
             size1 = struct.calcsize(fmt)
             if size1 > len(buf):
@@ -262,7 +262,7 @@ class UBloxDescriptor:
         msg._unpacked = True
 
     def pack(self, msg, msg_class=None, msg_id=None):
-	'''pack a UBloxMessage from the .fields and ._recs attributes in msg'''
+        '''pack a UBloxMessage from the .fields and ._recs attributes in msg'''
         f1 = []
         if msg_class is None:
             msg_class = msg.msg_class()
@@ -279,7 +279,7 @@ class UBloxDescriptor:
                 f1.append(msg._fields[fieldname])
             else:
                 for a in range(alen):
-                    f1.append(msg._fields[fieldname][a])                    
+                    f1.append(msg._fields[fieldname][a])
         try:
             # try full length message
             fmt = self.msg_format.replace(',', '')
@@ -299,11 +299,11 @@ class UBloxDescriptor:
             f2 = []
             for f in self.fields2:
                 f2.append(r[f])
-            msg._buf += struct.pack(self.format2, *tuple(f2))            
+            msg._buf += struct.pack(self.format2, *tuple(f2))
         msg._buf += struct.pack('<BB', *msg.checksum(data=msg._buf[2:]))
 
     def format(self, msg):
-	'''return a formatted string for a message'''
+        '''return a formatted string for a message'''
         if not msg._unpacked:
             self.unpack(msg)
         ret = self.name + ': '
@@ -328,15 +328,15 @@ class UBloxDescriptor:
                 ret += '%s=%s, ' % (f, v)
             ret = ret[:-2] + ' ], '
         return ret[:-2]
-        
+
 
 # list of supported message types.
 msg_types = {
     (CLASS_ACK, MSG_ACK_ACK)    : UBloxDescriptor('ACK_ACK',
-                                                  '<BB', 
+                                                  '<BB',
                                                   ['clsID', 'msgID']),
     (CLASS_ACK, MSG_ACK_NACK)   : UBloxDescriptor('ACK_NACK',
-                                                  '<BB', 
+                                                  '<BB',
                                                   ['clsID', 'msgID']),
     (CLASS_CFG, MSG_CFG_USB)    : UBloxDescriptor('CFG_USB',
                                                   '<HHHHHH32s32s32s',
@@ -344,7 +344,7 @@ msg_types = {
                                                    'flags', 'vendorString', 'productString', 'serialNumber']),
     (CLASS_CFG, MSG_CFG_PRT)    : UBloxDescriptor('CFG_PRT',
                                                   '<BBHIIHHHH',
-                                                  ['portID', 'reserved0', 'txReady', 'mode', 'baudRate', 'inProtoMask', 
+                                                  ['portID', 'reserved0', 'txReady', 'mode', 'baudRate', 'inProtoMask',
                                                    'outProtoMask', 'reserved4', 'reserved5']),
     (CLASS_CFG, MSG_CFG_CFG)    : UBloxDescriptor('CFG_CFG',
                                                   '<III,B',
@@ -366,22 +366,22 @@ msg_types = {
                                                   '<BB6B',
                                                   ['msgClass', 'msgId', 'rates[6]']),
     (CLASS_NAV, MSG_NAV_POSLLH) : UBloxDescriptor('NAV_POSLLH',
-                                                  '<IiiiiII', 
+                                                  '<IiiiiII',
                                                   ['iTOW', 'Longitude', 'Latitude', 'height', 'hMSL', 'hAcc', 'vAcc']),
     (CLASS_NAV, MSG_NAV_VELNED) : UBloxDescriptor('NAV_VELNED',
-                                                  '<IiiiIIiII', 
-                                                  ['iTOW', 'velN', 'velE', 'velD', 'speed', 'gSpeed', 'heading', 
+                                                  '<IiiiIIiII',
+                                                  ['iTOW', 'velN', 'velE', 'velD', 'speed', 'gSpeed', 'heading',
                                                    'sAcc', 'cAcc']),
     (CLASS_NAV, MSG_NAV_DOP)    : UBloxDescriptor('NAV_DOP',
-                                                  '<IHHHHHHH', 
+                                                  '<IHHHHHHH',
                                                   ['iTOW', 'gDOP', 'pDOP', 'tDOP', 'vDOP', 'hDOP', 'nDOP', 'eDOP']),
     (CLASS_NAV, MSG_NAV_STATUS) : UBloxDescriptor('NAV_STATUS',
-                                                  '<IBBBBII', 
+                                                  '<IBBBBII',
                                                   ['iTOW', 'gpsFix', 'flags', 'fixStat', 'flags2', 'ttff', 'msss']),
     (CLASS_NAV, MSG_NAV_SOL)    : UBloxDescriptor('NAV_SOL',
                                                   '<IihBBiiiIiiiIHBBI',
                                                   ['iTOW', 'fTOW', 'week', 'gpsFix', 'flags', 'ecefX', 'ecefY', 'ecefZ',
-                                                   'pAcc', 'ecefVX', 'ecefVY', 'ecefVZ', 'sAcc', 'pDOP', 'reserved1', 
+                                                   'pAcc', 'ecefVX', 'ecefVY', 'ecefVZ', 'sAcc', 'pDOP', 'reserved1',
                                                    'numSV', 'reserved2']),
     (CLASS_NAV, MSG_NAV_PVT)	: UBloxDescriptor('NAV_PVT',
     											  '<IHBBBBBBIiBBBBiiiiIIiiiiiIIH6Bi4B',
@@ -490,22 +490,22 @@ msg_types = {
                                                   ['svid', 'week', 'dwrd[8]']),
     (CLASS_CFG, MSG_CFG_NAV5)   : UBloxDescriptor('CFG_NAV5',
                                                   '<HBBiIbBHHHHBBIII',
-                                                  ['mask', 'dynModel', 'fixMode', 'fixedAlt', 'fixedAltVar', 'minElev', 
-                                                   'drLimit', 'pDop', 'tDop', 'pAcc', 'tAcc', 'staticHoldThresh', 
+                                                  ['mask', 'dynModel', 'fixMode', 'fixedAlt', 'fixedAltVar', 'minElev',
+                                                   'drLimit', 'pDop', 'tDop', 'pAcc', 'tAcc', 'staticHoldThresh',
                                                    'dgpsTimeOut', 'reserved2', 'reserved3', 'reserved4']),
     (CLASS_CFG, MSG_CFG_NAVX5)   : UBloxDescriptor('CFG_NAVX5',
                                                   '<HHIBBBBBBBBBBHIBBBBBBHII',
                                                   ['version', 'mask1', 'reserved0', 'reserved1', 'reserved2',
-                                                   'minSVs', 'maxSVs', 'minCNO', 'reserved5', 'iniFix3D', 
+                                                   'minSVs', 'maxSVs', 'minCNO', 'reserved5', 'iniFix3D',
                                                    'reserved6', 'reserved7', 'reserved8', 'wknRollover',
                                                    'reserved9', 'reserved10', 'reserved11',
-                                                   'usePPP', 'useAOP', 'reserved12', 'reserved13', 
+                                                   'usePPP', 'useAOP', 'reserved12', 'reserved13',
                                                    'aopOrbMaxErr', 'reserved3', 'reserved4']),
     (CLASS_MON, MSG_MON_HW)     : UBloxDescriptor('MON_HW',
                                                   '<IIIIHHBBBBIB25BHIII',
                                                   ['pinSel', 'pinBank', 'pinDir', 'pinVal', 'noisePerMS', 'agcCnt', 'aStatus',
-						   'aPower', 'flags', 'reserved1', 'usedMask', 
-						   'VP[25]',                                                  
+						   'aPower', 'flags', 'reserved1', 'usedMask',
+						   'VP[25]',
 						   'jamInd', 'reserved3', 'pinInq',
 						   'pullH', 'pullL']),
     (CLASS_MON, MSG_MON_HW2)    : UBloxDescriptor('MON_HW2',
@@ -527,7 +527,7 @@ msg_types = {
                                                   ['towMS', 'towSubMS', 'qErr', 'week', 'flags', 'reserved1']),
     (CLASS_TIM, MSG_TIM_TM2)    : UBloxDescriptor('TIM_TM2',
                                                   '<BBHHHIIIII',
-                                                  ['ch', 'flags', 'count', 'wnR', 'wnF', 'towMsR', 'towSubMsR', 
+                                                  ['ch', 'flags', 'count', 'wnR', 'wnF', 'towMsR', 'towSubMsR',
                                                    'towMsF', 'towSubMsF', 'accEst']),
     (CLASS_TIM, MSG_TIM_SVIN)   : UBloxDescriptor('TIM_SVIN',
                                                   '<IiiiIIBBH',
@@ -537,146 +537,286 @@ msg_types = {
     (CLASS_INF, MSG_INF_DEBUG)  : UBloxDescriptor('INF_DEBUG', '<18s', ['str'])
 }
 
-
-class UBloxMessage:
-    '''UBlox message class - holds a UBX binary message'''
-    def __init__(self):
-        self._buf = ""
-        self._fields = {}
-        self._recs = []
-        self._unpacked = False
-        self.debug_level = 0
-
-    def __str__(self):
-	'''format a message as a string'''
-        if not self.valid():
-            return 'UBloxMessage(INVALID)'
-        type = self.msg_type()
-        if type in msg_types:
-            return msg_types[type].format(self)
-        return 'UBloxMessage(UNKNOWN %s, %u)' % (str(type), self.msg_length())
-
-    def __getattr__(self, name):
-        '''allow access to message fields'''
-        try:
-            return self._fields[name]
-        except KeyError:
-            if name == 'recs':
-                return self._recs
-            raise AttributeError(name)
-
-    def __setattr__(self, name, value):
-        '''allow access to message fields'''
-        if name.startswith('_'):
-            self.__dict__[name] = value
-        else:
-            self._fields[name] = value
-
-    def have_field(self, name):
-        '''return True if a message contains the given field'''
-        return name in self._fields
-
-    def debug(self, level, msg):
-        '''write a debug message'''
-        if self.debug_level >= level:
-            print(msg)
-
-    def unpack(self):
-	'''unpack a message'''
-        if not self.valid():
-            raise UBloxError('INVALID MESSAGE')
-        type = self.msg_type()
-        if not type in msg_types:
-            raise UBloxError('Unknown message %s length=%u' % (str(type), len(self._buf)))
-        msg_types[type].unpack(self)
-
-    def pack(self):
-	'''pack a message'''
-        if not self.valid():
-            raise UbloxError('INVALID MESSAGE')
-        type = self.msg_type()
-        if not type in msg_types:
-            raise UBloxError('Unknown message %s' % str(type))
-        msg_types[type].pack(self)
-
-    def name(self):
-	'''return the short string name for a message'''
-        if not self.valid():
-            raise UbloxError('INVALID MESSAGE')
-        type = self.msg_type()
-        if not type in msg_types:
-            raise UBloxError('Unknown message %s length=%u' % (str(type), len(self._buf)))
-        return msg_types[type].name
-
-    def msg_class(self):
-	'''return the message class'''
-        return ord(self._buf[2])
-
-    def msg_id(self):
-	'''return the message id within the class'''
-        return ord(self._buf[3])
-
-    def msg_type(self):
-	'''return the message type tuple (class, id)'''
-        return (self.msg_class(), self.msg_id())
-
-    def msg_length(self):
-	'''return the payload length'''
-        (payload_length,) = struct.unpack('<H', self._buf[4:6])
-        return payload_length
-
-    def valid_so_far(self):
-	'''check if the message is valid so far'''
-        if len(self._buf) > 0 and ord(self._buf[0]) != PREAMBLE1:
-            return False
-        if len(self._buf) > 1 and ord(self._buf[1]) != PREAMBLE2:
-            self.debug(1, "bad pre2")
-            return False
-        if self.needed_bytes() == 0 and not self.valid():
-            if len(self._buf) > 8:
-                self.debug(1, "bad checksum len=%u needed=%u" % (len(self._buf), self.needed_bytes()))
-            else:
-                self.debug(1, "bad len len=%u needed=%u" % (len(self._buf), self.needed_bytes()))
-            return False
-        return True
-
-    def add(self, bytes):
-	'''add some bytes to a message'''
-        self._buf += bytes
-        while not self.valid_so_far() and len(self._buf) > 0:
-	    '''handle corrupted streams'''
-            self._buf = self._buf[1:]
-        if self.needed_bytes() < 0:
+if sys.version_info < (3,):
+    class UBloxMessage:
+        '''UBlox message class - holds a UBX binary message'''
+        def __init__(self):
             self._buf = ""
+            self._fields = {}
+            self._recs = []
+            self._unpacked = False
+            self.debug_level = 0
 
-    def checksum(self, data=None):
-	'''return a checksum tuple for a message'''
-        if data is None:
-            data = self._buf[2:-2]
-        cs = 0
-        ck_a = 0
-        ck_b = 0
-        for i in data:
-            ck_a = (ck_a + ord(i)) & 0xFF
-            ck_b = (ck_b + ck_a) & 0xFF
-        return (ck_a, ck_b)
+        def __str__(self):
+            '''format a message as a string'''
+            if not self.valid():
+                return 'UBloxMessage(INVALID)'
+            type = self.msg_type()
+            if type in msg_types:
+                return msg_types[type].format(self)
+            return 'UBloxMessage(UNKNOWN %s, %u)' % (str(type), self.msg_length())
 
-    def valid_checksum(self):
-	'''check if the checksum is OK'''
-        (ck_a, ck_b) = self.checksum()
-        d = self._buf[2:-2]
-        (ck_a2, ck_b2) = struct.unpack('<BB', self._buf[-2:])
-        return ck_a == ck_a2 and ck_b == ck_b2
+        def __getattr__(self, name):
+            '''allow access to message fields'''
+            try:
+                return self._fields[name]
+            except KeyError:
+                if name == 'recs':
+                    return self._recs
+                raise AttributeError(name)
 
-    def needed_bytes(self):
-        '''return number of bytes still needed'''
-        if len(self._buf) < 6:
-            return 8 - len(self._buf)
-        return self.msg_length() + 8 - len(self._buf)
+        def __setattr__(self, name, value):
+            '''allow access to message fields'''
+            if name.startswith('_'):
+                self.__dict__[name] = value
+            else:
+                self._fields[name] = value
 
-    def valid(self):
-	'''check if a message is valid'''
-        return len(self._buf) >= 8 and self.needed_bytes() == 0 and self.valid_checksum()
+        def have_field(self, name):
+            '''return True if a message contains the given field'''
+            return name in self._fields
+
+        def debug(self, level, msg):
+            '''write a debug message'''
+            if self.debug_level >= level:
+                print(msg)
+
+        def unpack(self):
+            '''unpack a message'''
+            if not self.valid():
+                raise UBloxError('INVALID MESSAGE')
+            type = self.msg_type()
+            if not type in msg_types:
+                raise UBloxError('Unknown message %s length=%u' % (str(type), len(self._buf)))
+            msg_types[type].unpack(self)
+
+        def pack(self):
+            '''pack a message'''
+            if not self.valid():
+                raise UbloxError('INVALID MESSAGE')
+            type = self.msg_type()
+            if not type in msg_types:
+                raise UBloxError('Unknown message %s' % str(type))
+            msg_types[type].pack(self)
+
+        def name(self):
+            '''return the short string name for a message'''
+            if not self.valid():
+                raise UbloxError('INVALID MESSAGE')
+            type = self.msg_type()
+            if not type in msg_types:
+                raise UBloxError('Unknown message %s length=%u' % (str(type), len(self._buf)))
+            return msg_types[type].name
+
+        def msg_class(self):
+            '''return the message class'''
+            return ord(self._buf[2])
+
+        def msg_id(self):
+            '''return the message id within the class'''
+            return ord(self._buf[3])
+
+        def msg_type(self):
+            '''return the message type tuple (class, id)'''
+            return (self.msg_class(), self.msg_id())
+
+        def msg_length(self):
+            '''return the payload length'''
+            (payload_length,) = struct.unpack('<H', self._buf[4:6])
+            return payload_length
+
+        def valid_so_far(self):
+            '''check if the message is valid so far'''
+            if len(self._buf) > 0 and ord(self._buf[0]) != PREAMBLE1:
+                return False
+            if len(self._buf) > 1 and ord(self._buf[1]) != PREAMBLE2:
+                self.debug(1, "bad pre2")
+                return False
+            if self.needed_bytes() == 0 and not self.valid():
+                if len(self._buf) > 8:
+                    self.debug(1, "bad checksum len=%u needed=%u" % (len(self._buf), self.needed_bytes()))
+                else:
+                    self.debug(1, "bad len len=%u needed=%u" % (len(self._buf), self.needed_bytes()))
+                return False
+            return True
+
+        def add(self, bytes):
+            '''add some bytes to a message'''
+            self._buf += bytes
+            while not self.valid_so_far() and len(self._buf) > 0:
+                '''handle corrupted streams'''
+                self._buf = self._buf[1:]
+            if self.needed_bytes() < 0:
+                self._buf = ""
+
+        def checksum(self, data=None):
+            '''return a checksum tuple for a message'''
+            if data is None:
+                data = self._buf[2:-2]
+            cs = 0
+            ck_a = 0
+            ck_b = 0
+            for i in data:
+                ck_a = (ck_a + ord(i)) & 0xFF
+                ck_b = (ck_b + ck_a) & 0xFF
+            return (ck_a, ck_b)
+
+        def valid_checksum(self):
+            '''check if the checksum is OK'''
+            (ck_a, ck_b) = self.checksum()
+            d = self._buf[2:-2]
+            (ck_a2, ck_b2) = struct.unpack('<BB', self._buf[-2:])
+            return ck_a == ck_a2 and ck_b == ck_b2
+
+        def needed_bytes(self):
+            '''return number of bytes still needed'''
+            if len(self._buf) < 6:
+                return 8 - len(self._buf)
+            return self.msg_length() + 8 - len(self._buf)
+
+        def valid(self):
+            '''check if a message is valid'''
+            return len(self._buf) >= 8 and self.needed_bytes() == 0 and self.valid_checksum()
+else:
+    class UBloxMessage:
+        '''UBlox message class - holds a UBX binary message'''
+        def __init__(self):
+            self._buf = b""
+            self._fields = {}
+            self._recs = []
+            self._unpacked = False
+            self.debug_level = 0
+
+        def __str__(self):
+            '''format a message as a string'''
+            if not self.valid():
+                return 'UBloxMessage(INVALID)'
+            type = self.msg_type()
+            if type in msg_types:
+                return msg_types[type].format(self)
+            return 'UBloxMessage(UNKNOWN %s, %u)' % (str(type), self.msg_length())
+
+        def __getattr__(self, name):
+            '''allow access to message fields'''
+            try:
+                return self._fields[name]
+            except KeyError:
+                if name == 'recs':
+                    return self._recs
+                raise AttributeError(name)
+
+        def __setattr__(self, name, value):
+            '''allow access to message fields'''
+            if name.startswith('_'):
+                self.__dict__[name] = value
+            else:
+                self._fields[name] = value
+
+        def have_field(self, name):
+            '''return True if a message contains the given field'''
+            return name in self._fields
+
+        def debug(self, level, msg):
+            '''write a debug message'''
+            if self.debug_level >= level:
+                print(msg)
+
+        def unpack(self):
+            '''unpack a message'''
+            if not self.valid():
+                raise UBloxError('INVALID MESSAGE')
+            type = self.msg_type()
+            if not type in msg_types:
+                raise UBloxError('Unknown message %s length=%u' % (str(type), len(self._buf)))
+            msg_types[type].unpack(self)
+
+        def pack(self):
+            '''pack a message'''
+            if not self.valid():
+                raise UbloxError('INVALID MESSAGE')
+            type = self.msg_type()
+            if not type in msg_types:
+                raise UBloxError('Unknown message %s' % str(type))
+            msg_types[type].pack(self)
+
+        def name(self):
+            '''return the short string name for a message'''
+            if not self.valid():
+                raise UbloxError('INVALID MESSAGE')
+            type = self.msg_type()
+            if not type in msg_types:
+                raise UBloxError('Unknown message %s length=%u' % (str(type), len(self._buf)))
+            return msg_types[type].name
+
+        def msg_class(self):
+            '''return the message class'''
+            return self._buf[2]
+
+        def msg_id(self):
+            '''return the message id within the class'''
+            return self._buf[3]
+
+        def msg_type(self):
+            '''return the message type tuple (class, id)'''
+            return (self.msg_class(), self.msg_id())
+
+        def msg_length(self):
+            '''return the payload length'''
+            (payload_length,) = struct.unpack('<H', self._buf[4:6])
+            return payload_length
+
+        def valid_so_far(self):
+            '''check if the message is valid so far'''
+            if len(self._buf) > 0 and self._buf[0] != PREAMBLE1:
+                return False
+            if len(self._buf) > 1 and self._buf[1] != PREAMBLE2:
+                self.debug(1, "bad pre2")
+                return False
+            if self.needed_bytes() == 0 and not self.valid():
+                if len(self._buf) > 8:
+                    self.debug(1, "bad checksum len=%u needed=%u" % (len(self._buf), self.needed_bytes()))
+                else:
+                    self.debug(1, "bad len len=%u needed=%u" % (len(self._buf), self.needed_bytes()))
+                return False
+            return True
+
+        def add(self, bytes):
+            '''add some bytes to a message'''
+            self._buf += bytes
+            while not self.valid_so_far() and len(self._buf) > 0:
+                '''handle corrupted streams'''
+                self._buf = self._buf[1:]
+            if self.needed_bytes() < 0:
+                self._buf = ""
+
+        def checksum(self, data=None):
+            '''return a checksum tuple for a message'''
+            if data is None:
+                data = self._buf[2:-2]
+            cs = 0
+            ck_a = 0
+            ck_b = 0
+            for i in data:
+                ck_a = (ck_a + i) & 0xFF
+                ck_b = (ck_b + ck_a) & 0xFF
+            return (ck_a, ck_b)
+
+        def valid_checksum(self):
+            '''check if the checksum is OK'''
+            (ck_a, ck_b) = self.checksum()
+            d = self._buf[2:-2]
+            (ck_a2, ck_b2) = struct.unpack('<BB', self._buf[-2:])
+            return ck_a == ck_a2 and ck_b == ck_b2
+
+        def needed_bytes(self):
+            '''return number of bytes still needed'''
+            if len(self._buf) < 6:
+                return 8 - len(self._buf)
+            return self.msg_length() + 8 - len(self._buf)
+
+        def valid(self):
+            '''check if a message is valid'''
+            return len(self._buf) >= 8 and self.needed_bytes() == 0 and self.valid_checksum()
 
 
 class UBlox:
@@ -699,7 +839,7 @@ class UBlox:
             self.dev = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.dev.connect(destination_addr)
             self.dev.setblocking(1)
-            self.dev.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)            
+            self.dev.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
             self.use_sendrecv = True
         elif os.path.isfile(self.serial_device):
             self.read_only = True
@@ -715,9 +855,9 @@ class UBlox:
         self.preferred_dgps_timeout = None
 
     def close(self):
-	'''close the device'''
+        '''close the device'''
         self.dev.close()
-	self.dev = None
+        self.dev = None
 
     def set_debug(self, debug_level):
         '''set debug level'''
@@ -729,7 +869,7 @@ class UBlox:
             print(msg)
 
     def set_logfile(self, logfile, append=False):
-	'''setup logging to a file'''
+        '''setup logging to a file'''
         if self.log is not None:
             self.log.close()
             self.log = None
@@ -791,7 +931,7 @@ class UBlox:
             self.write(s)
 
     def set_binary(self):
-	'''put a UBlox into binary mode using a NMEA string'''
+        '''put a UBlox into binary mode using a NMEA string'''
         if not self.read_only:
             print("try set binary at %u" % self.baudrate)
             self.send_nmea("$PUBX,41,0,0007,0001,%u,0" % self.baudrate)
@@ -802,10 +942,10 @@ class UBlox:
             self.send_nmea("$PUBX,41,5,0007,0001,%u,0" % self.baudrate)
 
     def seek_percent(self, pct):
-	'''seek to the given percentage of a file'''
-	self.dev.seek(0, 2)
-	filesize = self.dev.tell()
-	self.dev.seek(pct*0.01*filesize)
+        '''seek to the given percentage of a file'''
+        self.dev.seek(0, 2)
+        filesize = self.dev.tell()
+        self.dev.seek(pct*0.01*filesize)
 
     def special_handling(self, msg):
         '''handle automatic configuration changes'''
@@ -838,7 +978,7 @@ class UBlox:
 
 
     def receive_message(self, ignore_eof=False):
-	'''blocking receive of one ublox message'''
+        '''blocking receive of one ublox message'''
         msg = UBloxMessage()
         while True:
             n = msg.needed_bytes()
@@ -857,7 +997,7 @@ class UBlox:
                 return msg
 
     def receive_message_noerror(self, ignore_eof=False):
-	'''blocking receive of one ublox message, ignoring errors'''
+        '''blocking receive of one ublox message, ignoring errors'''
         try:
             return self.receive_message(ignore_eof=ignore_eof)
         except UBloxError as e:
@@ -870,15 +1010,15 @@ class UBlox:
             return None
 
     def send(self, msg):
-	'''send a preformatted ublox message'''
+        '''send a preformatted ublox message'''
         if not msg.valid():
             self.debug(1, "invalid send")
             return
         if not self.read_only:
-            self.write(msg._buf)        
+            self.write(msg._buf)
 
     def send_message(self, msg_class, msg_id, payload):
-	'''send a ublox message with class, id and payload'''
+        '''send a ublox message with class, id and payload'''
         msg = UBloxMessage()
         msg._buf = struct.pack('<BBBBH', 0xb5, 0x62, msg_class, msg_id, len(payload))
         msg._buf += payload
@@ -887,33 +1027,33 @@ class UBlox:
         self.send(msg)
 
     def configure_solution_rate(self, rate_ms=200, nav_rate=1, timeref=0):
-	'''configure the solution rate in milliseconds'''
+        '''configure the solution rate in milliseconds'''
         payload = struct.pack('<HHH', rate_ms, nav_rate, timeref)
         self.send_message(CLASS_CFG, MSG_CFG_RATE, payload)
 
     def configure_message_rate(self, msg_class, msg_id, rate):
-	'''configure the message rate for a given message'''
+        '''configure the message rate for a given message'''
         payload = struct.pack('<BBB', msg_class, msg_id, rate)
         self.send_message(CLASS_CFG, MSG_CFG_SET_RATE, payload)
 
     def configure_port(self, port=1, inMask=3, outMask=3, mode=2240, baudrate=None):
-	'''configure a IO port'''
+        '''configure a IO port'''
         if baudrate is None:
             baudrate = self.baudrate
         payload = struct.pack('<BBHIIHHHH', port, 0xff, 0, mode, baudrate, inMask, outMask, 0xFFFF, 0xFFFF)
         self.send_message(CLASS_CFG, MSG_CFG_PRT, payload)
 
     def configure_loadsave(self, clearMask=0, saveMask=0, loadMask=0, deviceMask=0):
-	'''configure configuration load/save'''
+        '''configure configuration load/save'''
         payload = struct.pack('<IIIB', clearMask, saveMask, loadMask, deviceMask)
         self.send_message(CLASS_CFG, MSG_CFG_CFG, payload)
 
     def configure_poll(self, msg_class, msg_id, payload=''):
-	'''poll a configuration message'''
+        '''poll a configuration message'''
         self.send_message(msg_class, msg_id, payload)
 
     def configure_poll_port(self, portID=None):
-	'''poll a port configuration'''
+        '''poll a port configuration'''
         if portID is None:
             self.configure_poll(CLASS_CFG, MSG_CFG_PRT)
         else:
@@ -928,4 +1068,3 @@ class UBlox:
         ''' Reset the module for hot/warm/cold start'''
         payload = struct.pack('<HBB', set, mode, 0)
         self.send_message(CLASS_CFG, MSG_CFG_RST, payload)
-
