@@ -787,7 +787,7 @@ else:
                 '''handle corrupted streams'''
                 self._buf = self._buf[1:]
             if self.needed_bytes() < 0:
-                self._buf = ""
+                self._buf = b""
 
         def checksum(self, data=None):
             '''return a checksum tuple for a message'''
