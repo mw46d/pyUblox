@@ -100,7 +100,7 @@ MSG_CFG_RXM = 0x11
 MSG_CFG_SBAS = 0x16
 MSG_CFG_TMODE2 = 0x3D
 MSG_CFG_TMODE = 0x1D
-MSG_CFG_TPS = 0x31
+MSG_CFG_TP5 = 0x31
 MSG_CFG_TP = 0x07
 MSG_CFG_GNSS = 0x3E
 
@@ -534,7 +534,11 @@ msg_types = {
                                                   ['dur', 'meanX', 'meanY', 'meanZ', 'meanV',
                                                    'obs', 'valid', 'active', 'reserved1']),
     (CLASS_INF, MSG_INF_ERROR)  : UBloxDescriptor('INF_ERR', '<18s', ['str']),
-    (CLASS_INF, MSG_INF_DEBUG)  : UBloxDescriptor('INF_DEBUG', '<18s', ['str'])
+    (CLASS_INF, MSG_INF_DEBUG)  : UBloxDescriptor('INF_DEBUG', '<18s', ['str']),
+    (CLASS_CFG, MSG_CFG_TP5)    : UBloxDescriptor('CFG_TP5', '<BBHhhIIIIiI',
+                                                  ['tpIdx', 'version', 'reserved1', 'antCableDelay', 'rfGroupDelay',
+                                                   'freqPeriod', 'freqPeriodLock', 'pulseLenRatio', 'pulseLenRatioLock',
+                                                   'userConfigDelay', 'flags'])
 }
 
 if sys.version_info < (3,):
