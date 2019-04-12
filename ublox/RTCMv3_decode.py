@@ -11,6 +11,8 @@ rtklib.
 
 
 import sys, time
+import struct
+import threading
 import bitstring as bs
 import satPosition, util, RTCMv2, positionEstimate
 
@@ -162,7 +164,7 @@ def decode_1004(pkt):
     if len(quals) > max_sats:
         print("Drop {} sats for encode".format(len(quals) - max_sats))
         quals = quals[:max_sats]
-    print(nsat, len(quals), quals)
+    # MARCO print(nsat, len(quals), quals)
 
     # Copy the kept sats in to the correction set 
     corr_set = {}
@@ -192,8 +194,8 @@ def decode_1006(pkt):
     anth = pkt.read(16).uint * 0.0001
  
     ref_pos = [ref_x, ref_y, ref_z]
-    print(ref_pos)
-    print(util.PosVector(*ref_pos).ToLLH())
+    # MARCO print(ref_pos)
+    # MARCO print(util.PosVector(*ref_pos).ToLLH())
 
 def decode_1033(pkt):
     # Don't really care about any of this stuff at this stage..
@@ -311,7 +313,7 @@ def regen_v2_type1():
         # assume the time_of_week is the exact receiver time of week that the message arrived.
         # subtract the time of flight to get the satellite transmit time
         transmitTime = itow - tof
-    
+
         T = util.correctWeeklyTime(transmitTime - toc)
 
         satpos = satPosition.satPosition_raw(eph[svid], svid, transmitTime)
@@ -320,7 +322,7 @@ def regen_v2_type1():
         satPosition.correctPosition_raw(satpos, tof)
 
         geo = satpos.distance(util.PosVector(*ref_pos))
-    
+
         dTclck = eph[svid].af0 + eph[svid].af1 * T + eph[svid].af2 * T * T + Trel - eph[svid].Tgd
 
         # Incoming PR is already corrected for receiver clock bias
@@ -355,15 +357,17 @@ def regen_v2_type1():
         return msg
 
 def regen_v2_type3():
+    if ref_pos is None:
+        return
+
     msg = rtcm.RTCMType3_ext(itow, week, util.PosVector(*ref_pos))
     if len(msg) > 0:
         return msg
 
-
 def parse_rtcmv3(pkt):
     pkt_type = pkt.read(12).uint
 
-    print pkt_type
+    # print pkt_type
 
     if pkt_type == 1004:
         decode_1004(pkt)
@@ -375,72 +379,91 @@ def parse_rtcmv3(pkt):
         decode_1019(pkt)
     elif pkt_type == 1033:
         decode_1033(pkt)
-    #else:
-    #    print "Ignore"
+    # else:
+    #     print("Ignored: %d" % pkt_type)
 
 
+class RTCMConverterThread(threading.Thread):
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs={}):
+        self._stopevent = threading.Event()
+        self._sleepperiod = 1.0
 
-def RTCM_converter_thread(server, port, username, password, mountpoint, rtcm_callback = None):
-    import subprocess
+        threading.Thread.__init__(self, group = group, target = target, name = name, args = args, kwargs = kwargs)
 
-    nt = subprocess.Popen(["./ntripclient",
-                            "--server", server,
-                            "--password", password,
-                            "--user", username,
-                            "--mountpoint", mountpoint ],
-                            stdout=subprocess.PIPE)
+    def run(self):
+        import subprocess
 
-    """nt = subprocess.Popen(["./ntrip.py", server, str(port), username, password, mountpoint],
+        server, port, username, password, mountpoint, rtcm_callback = self._Thread__args
+
+        nt = subprocess.Popen(["./ntripclient",
+                                "--server", server,
+                                "--password", password,
+                                "--user", username,
+                                "--mountpoint", mountpoint ],
+                                stdout=subprocess.PIPE)
+
+        """nt = subprocess.Popen(["./ntrip.py", server, str(port), username, password, mountpoint],
                             stdout=subprocess.PIPE)"""
 
 
-    if nt is None or nt.stdout is None:
-        indev = sys.stdin
-    else:
-        indev = nt.stdout
+        if nt is None or nt.stdout is None:
+            indev = sys.stdin
+        else:
+            indev = nt.stdout
 
-    print("RTCM using input {}".format(indev))
-
-    while True:
         sio = indev
 
-        d = ord(sio.read(1))
-        if d != RTCMv3_PREAMBLE:
-            continue
+        while not self._stopevent.isSet():
+            d = ord(sio.read(1))
+            if d != RTCMv3_PREAMBLE:
+                continue
 
-        pack_stream = BitStream()
+            pack_stream = BitStream()
 
-        l1 = ord(sio.read(1))
-        l2 = ord(sio.read(1))
+            l1 = ord(sio.read(1))
+            l2 = ord(sio.read(1))
 
-        pack_stream.append(bs.pack('2*uint:8', l1, l2))
-        pack_stream.read(6)
-        pkt_len = pack_stream.read(10).uint
+            pack_stream.append(bs.pack('2*uint:8', l1, l2))
+            pack_stream.read(6)
+            pkt_len = pack_stream.read(10).uint
 
-        pkt = sio.read(pkt_len)
-        parity = sio.read(3)
+            pkt = sio.read(pkt_len)
+            parity = sio.read(3)
 
-        if len(pkt) != pkt_len:
-            print "Length error {} {}".format(len(pkt), pkt_len)
-            continue
+            if len(pkt) != pkt_len:
+                print "Length error {} {}".format(len(pkt), pkt_len)
+                continue
 
-        if True: #TODO check parity
-            for d in pkt:
-                pack_stream.append(bs.pack('uint:8',ord(d)))
+            if True: #TODO check parity
+                for d in pkt:
+                    pack_stream.append(bs.pack('uint:8',ord(d)))
 
-            msg = parse_rtcmv3(pack_stream)
+                msg = parse_rtcmv3(pack_stream)
+                # MARCO forward unchanged
+                pack_stream.append(bs.pack('3*uint:8', ord(parity[0]), ord(parity[1]), ord(parity[2])))
+                msg = struct.pack('<B', RTCMv3_PREAMBLE) + pack_stream.tobytes()
 
             if msg is not None and rtcm_callback is not None:
                 rtcm_callback(msg)
 
+        if nt is not None:
+            nt.terminate()
+            nt.wait()
+            nt = None
+
+    def join(self, timeout = None):
+        """ Stop the thread. """
+        self._stopevent.set()
+        threading.Thread.join(self, timeout)
+
 def run_RTCM_converter(server, port, user, passwd, mount, rtcm_callback=None, force_rxclk_correction=True):
     global correct_rxclk
-    import threading
 
     correct_rxclk = force_rxclk_correction
 
-    t = threading.Thread(target=RTCM_converter_thread, args=(server, port, user, passwd, mount, rtcm_callback,))
+    t = RTCMConverterThread(args=(server, port, user, passwd, mount, rtcm_callback,))
     t.start()
+    return t
 
 def _printer(p):
     print(p)
