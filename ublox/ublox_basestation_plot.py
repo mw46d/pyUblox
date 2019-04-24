@@ -4,10 +4,15 @@ import ublox, sys, fnmatch, os, time
 import RTCMv3_decode
 import numpy, util, math
 from collections import deque
-import matplotlib
-from matplotlib import pyplot
-from matplotlib.lines import Line2D
-import matplotlib.animation as animation
+import datetime
+
+have_display = 'DISPLAY' in os.environ
+
+if have_display:
+    import matplotlib
+    from matplotlib import pyplot
+    from matplotlib.lines import Line2D
+    import matplotlib.animation as animation
 
 from optparse import OptionParser
 
@@ -20,10 +25,17 @@ parser.add_option("--ntrip-mount", default = 'DIAB_RTCM3')
 
 (opts, args) = parser.parse_args()
 
-# create a figure
-f = pyplot.figure(1)
-f.clf()
-ax1 = f.add_axes([ 0.05, 0.05, 0.9, 0.9])
+log_fd = open(os.path.expanduser("~/base_station_%s.log" % (datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S'))), "w")
+log_fd.write("%s: New log\n" % (datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')))
+log_fd.flush()
+
+if have_display:
+    # create a figure
+    f = pyplot.figure(1)
+    f.clf()
+    ax1 = f.add_axes([ 0.05, 0.05, 0.9, 0.9])
+else:
+    tty_fd = open('/dev/tty3', 'w+')
 
 for d in args:
     dev = ublox.UBlox(d)
@@ -53,8 +65,53 @@ satcount_string = ''
 status_string = ''
 svin_string = ''
 
-def animate(i):
+def tty_values():
+    global dev
+    global pos_d
+    global rtcm_thread
+    global satcount_string
+    global status_string
+    global svin_string
+    global tty_fd
+    global log_fd
+
+    tty_fd.write('\033[2J\033[;H')
+    tty_fd.write('\n\033[32m  %.8f, %.8f\033[0m\n\n' % (pos_d[0]))
+    tty_fd.write(status_string + '\n')
+    tty_fd.write(satcount_string + '\n\n')
+    tty_fd.write(svin_string + '\n')
+
+    log_fd.write("%s: %.8f, %.8f, %s %s %s\n" % (datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S'),
+        pos_d[0][0], pos_d[0][1], status_string, satcount_string, svin_string.replace('\n', ', ')))
+    log_fd.flush()
+
+def display_values():
     global ax1
+    global dev
+    global pos_d
+    global rtcm_thread
+    global satcount_string
+    global status_string
+    global svin_string
+    global log_fd
+
+    ax1.clear()
+    d_home = pos_d[0]
+    d_p1 = d_home
+    for d_p2 in pos_d:
+        if util.gps_distance(d_home[0], d_home[1], d_p2[0], d_p2[1]) < 5:
+            plot_line(d_p1, d_p2, d_home, 'ro')
+            d_p1 = d_p2
+    ax1.text(0.99, 0.62, "\n".join([ "%.8f, %.8f" % (pos_d[0]), status_string, satcount_string, svin_string ]),
+        horizontalalignment = 'right',
+        verticalalignment = 'bottom',
+        transform = ax1.transAxes)
+
+    log_fd.write("%s: %.8f, %.8f, %s %s %s\n" % (datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S'),
+        pos_d[0][0], pos_d[0][1], status_string, satcount_string, svin_string.replace('\n', ', ')))
+    log_fd.flush()
+
+def read_receiver(d_func):
     global dev
     global pos_d
     global rtcm_thread
@@ -68,18 +125,7 @@ def animate(i):
     if msg.name() == 'NAV_POSLLH':
         pos = (msg.Latitude * 1.0e-7, msg.Longitude * 1.0e-7)
         pos_d.appendleft(pos)
-        ax1.clear()
-        d_home = pos_d[0]
-        d_p1 = d_home
-        for d_p2 in pos_d:
-            if util.gps_distance(d_home[0], d_home[1], d_p2[0], d_p2[1]) < 5:
-                plot_line(d_p1, d_p2, d_home, 'ro')
-                d_p1 = d_p2
-        ax1.text(0.99, 0.62, "\n".join([ "%.8f, %.8f" % (pos_d[0]), status_string, satcount_string, svin_string ]),
-            horizontalalignment='right',
-            verticalalignment='bottom',
-            transform=ax1.transAxes)
-
+        d_func()
     elif msg.name() == 'NAV_SAT':
         c = 0
         for s in msg.recs:
@@ -108,9 +154,17 @@ def animate(i):
         if msg.flags & 0x02 == 0x02:
             f += '/DIFF'
         status_string = "Status: " + f
-        print("flags= %02x %02x" % (msg.flags, msg.fixStat))
+        # print("flags= %02x %02x" % (msg.flags, msg.fixStat))
 
-ani = animation.FuncAnimation(f, animate)
-pyplot.show()
-raw_input('Press enter')
+def animate(i):
+    read_receiver(display_values)
+
+if have_display:
+    ani = animation.FuncAnimation(f, animate)
+    pyplot.show()
+    raw_input('Press enter')
+else:
+    while True:
+        read_receiver(tty_values)
+
 
