@@ -5,6 +5,7 @@ import RTCMv3_decode
 import numpy, util, math
 from collections import deque
 import datetime
+import struct
 
 have_display = 'DISPLAY' in os.environ
 
@@ -39,6 +40,32 @@ else:
 
 for d in args:
     dev = ublox.UBlox(d)
+
+    # Test
+    b = ublox.UbloxConfigKV.pack([{ 'CFG_MSGOUT_UBX_NAV_HPPOSLLH_USB': 1 }])
+    payload = struct.pack('<BBh', 0, 1, 0)
+    payload += b
+    dev.send_message(ublox.CLASS_CFG, ublox.MSG_CFG_VALSET, payload)
+
+    b = ublox.UbloxConfigKV.pack([{ 'CFG_TMODE_MODE': 0 }])
+    payload = struct.pack('<BBh', 0, 1, 0)
+    payload += b
+    dev.send_message(ublox.CLASS_CFG, ublox.MSG_CFG_VALSET, payload)
+
+    b = ublox.UbloxConfigKV.pack([{ 'CFG_TMODE_SVIN_MIN_DUR': 8 * 60 * 60 }]) # 8 h
+    payload = struct.pack('<BBh', 0, 1, 0)
+    payload += b
+    dev.send_message(ublox.CLASS_CFG, ublox.MSG_CFG_VALSET, payload)
+
+    b = ublox.UbloxConfigKV.pack([{ 'CFG_TMODE_SVIN_ACC_LIMIT': 100 * 10 }]) # 10 cm
+    payload = struct.pack('<BBh', 0, 1, 0)
+    payload += b
+    dev.send_message(ublox.CLASS_CFG, ublox.MSG_CFG_VALSET, payload)
+
+    b = ublox.UbloxConfigKV.pack([{ 'CFG_TMODE_MODE': 1 }])
+    payload = struct.pack('<BBh', 0, 1, 0)
+    payload += b
+    dev.send_message(ublox.CLASS_CFG, ublox.MSG_CFG_VALSET, payload)
 
 def send_rtcm(msg):
     # print(msg)
@@ -76,13 +103,13 @@ def tty_values():
     global log_fd
 
     tty_fd.write('\033[2J\033[;H')
-    tty_fd.write('\n\033[32m  %.8f, %.8f\033[0m\n\n' % (pos_d[0]))
+    tty_fd.write('\n\033[32m  %.10f, %.10f\033[0m\n\n' % (pos_d[0][0], pos_d[0][1]))
     tty_fd.write(status_string + '\n')
     tty_fd.write(satcount_string + '\n\n')
     tty_fd.write(svin_string + '\n')
 
-    log_fd.write("%s: %.8f, %.8f, %s %s %s\n" % (datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S'),
-        pos_d[0][0], pos_d[0][1], status_string, satcount_string, svin_string.replace('\n', ', ')))
+    log_fd.write("%s: %.10f, %.10f, %f m %s %s %s\n" % (datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S'),
+        pos_d[0][0], pos_d[0][1], pos_d[0][2], status_string, satcount_string, svin_string.replace('\n', ', ')))
     log_fd.flush()
 
 def display_values():
@@ -102,12 +129,12 @@ def display_values():
         if util.gps_distance(d_home[0], d_home[1], d_p2[0], d_p2[1]) < 5:
             plot_line(d_p1, d_p2, d_home, 'ro')
             d_p1 = d_p2
-    ax1.text(0.99, 0.62, "\n".join([ "%.8f, %.8f" % (pos_d[0]), status_string, satcount_string, svin_string ]),
+    ax1.text(0.99, 0.62, "\n".join([ "%.10f, %.10f" % (pos_d[0]), status_string, satcount_string, svin_string ]),
         horizontalalignment = 'right',
         verticalalignment = 'bottom',
         transform = ax1.transAxes)
 
-    log_fd.write("%s: %.8f, %.8f, %s %s %s\n" % (datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S'),
+    log_fd.write("%s: %.10f, %.10f, %s %s %s\n" % (datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S'),
         pos_d[0][0], pos_d[0][1], status_string, satcount_string, svin_string.replace('\n', ', ')))
     log_fd.flush()
 
@@ -122,8 +149,39 @@ def read_receiver(d_func):
     msg = dev.receive_message(ignore_eof = True)
     msg.unpack()
     # print msg.name()
-    if msg.name() == 'NAV_POSLLH':
-        pos = (msg.Latitude * 1.0e-7, msg.Longitude * 1.0e-7)
+    # if msg.name() == 'NAV_POSLLH':
+    #     pos = (msg.Latitude * 1.0e-7, msg.Longitude * 1.0e-7, )
+    #     pos_d.appendleft(pos)
+    #     d_func()
+    if msg.name() == 'NAV_HPPOSLLH':
+        lat_hp = msg.latHp
+        lon_hp = msg.lonHp
+        hei_hp = msg.heightHp
+
+        if lat_hp < -99:
+            print("lat_hp %d!!" % lat_hp)
+            lat_hp = -99
+        elif lat_hp > 99:
+            print("lat_hp %d!!" % lat_hp)
+            lat_hp = 99
+
+        if lon_hp < -99:
+            print("lon_hp %d!!" % lon_hp)
+            lon_hp = -99
+        elif lon_hp > 99:
+            print("lon_hp %d!!" % lon_hp)
+            lon_hp = 99
+
+        if hei_hp < -9:
+            print("hei_hp %d!!" % hei_hp)
+            hei_hp = -9
+        elif hei_hp > 9:
+            print("hei_hp %d!!" % hei_hp)
+            hei_hp = 9
+
+
+        pos = (msg.lat * 1.0e-7 + lat_hp * 1.0e-9, msg.lon * 1.0e-7 + lon_hp * 1.0e-9, msg.height * 1.0e-3 + hei_hp * 1.0e-4)
+        # print("NAV_HPPOSLLH hAcc= %f m" % (msg.hAcc / 10000.0))
         pos_d.appendleft(pos)
         d_func()
     elif msg.name() == 'NAV_SAT':
@@ -155,6 +213,12 @@ def read_receiver(d_func):
             f += '/DIFF'
         status_string = "Status: " + f
         # print("flags= %02x %02x" % (msg.flags, msg.fixStat))
+
+    if msg.name() != None and msg.name() != '':
+        # log_fd.write("%s: %s\n" % (datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S'),
+        #             msg.name()))
+        # log_fd.flush()
+        pass
 
 def animate(i):
     read_receiver(display_values)

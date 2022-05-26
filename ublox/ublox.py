@@ -1809,6 +1809,11 @@ class UBlox:
         msg._buf += payload
         (ck_a, ck_b) = msg.checksum(msg._buf[2:])
         msg._buf += struct.pack('<BB', ck_a, ck_b)
+
+        # for i in msg._buf:
+        #     print "%02x " % ord(i),
+        # print("")
+
         self.send(msg)
 
     def configure_solution_rate(self, rate_ms=200, nav_rate=1, timeref=0):
