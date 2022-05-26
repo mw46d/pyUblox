@@ -8,38 +8,38 @@ speedOfLight    = 299792458.0 # in m/s
 gpsPi           = 3.1415926535898  # Definition of Pi used in the GPS coordinate system
 
 def gps_distance(lat1, lon1, lat2, lon2):
-	'''return distance between two points in meters,
-	coordinates are in degrees
-	thanks to http://www.movable-type.co.uk/scripts/latlong.html'''
-	from math import radians, cos, sin, sqrt, atan2
-	lat1 = radians(lat1)
-	lat2 = radians(lat2)
-	lon1 = radians(lon1)
-	lon2 = radians(lon2)
-	dLat = lat2 - lat1
-	dLon = lon2 - lon1
-	
-	a = sin(0.5*dLat)**2 + sin(0.5*dLon)**2 * cos(lat1) * cos(lat2)
-	c = 2.0 * atan2(sqrt(a), sqrt(1.0-a))
-	return radius_of_earth * c
+        '''return distance between two points in meters,
+        coordinates are in degrees
+        thanks to http://www.movable-type.co.uk/scripts/latlong.html'''
+        from math import radians, cos, sin, sqrt, atan2
+        lat1 = radians(lat1)
+        lat2 = radians(lat2)
+        lon1 = radians(lon1)
+        lon2 = radians(lon2)
+        dLat = lat2 - lat1
+        dLon = lon2 - lon1
+        
+        a = sin(0.5*dLat)**2 + sin(0.5*dLon)**2 * cos(lat1) * cos(lat2)
+        c = 2.0 * atan2(sqrt(a), sqrt(1.0-a))
+        return radius_of_earth * c
 
 
 def gps_bearing(lat1, lon1, lat2, lon2):
-	'''return bearing between two points in degrees, in range 0-360
-	thanks to http://www.movable-type.co.uk/scripts/latlong.html'''
-	from math import sin, cos, atan2, radians, degrees
-	lat1 = radians(lat1)
-	lat2 = radians(lat2)
-	lon1 = radians(lon1)
-	lon2 = radians(lon2)
-	dLat = lat2 - lat1
-	dLon = lon2 - lon1    
-	y = sin(dLon) * cos(lat2)
-	x = cos(lat1)*sin(lat2) - sin(lat1)*cos(lat2)*cos(dLon)
-	bearing = degrees(atan2(y, x))
-	if bearing < 0:
-		bearing += 360.0
-	return bearing
+        '''return bearing between two points in degrees, in range 0-360
+        thanks to http://www.movable-type.co.uk/scripts/latlong.html'''
+        from math import sin, cos, atan2, radians, degrees
+        lat1 = radians(lat1)
+        lat2 = radians(lat2)
+        lon1 = radians(lon1)
+        lon2 = radians(lon2)
+        dLat = lat2 - lat1
+        dLon = lon2 - lon1    
+        y = sin(dLon) * cos(lat2)
+        x = cos(lat1)*sin(lat2) - sin(lat1)*cos(lat2)*cos(dLon)
+        bearing = degrees(atan2(y, x))
+        if bearing < 0:
+                bearing += 360.0
+        return bearing
 
 class PosLLH:
     '''a class for latitude/longitude/altitude'''
@@ -58,20 +58,20 @@ class PosLLH:
         http://www.nicolargo.com/dev/xyz2lla/
         '''
         from math import sqrt, pow, sin, cos
-	a = 6378137.0
-	e = 8.1819190842622e-2
-	pi = gpsPi
-	
-	lat = self.lat*(pi/180.0)
-	lon = self.lon*(pi/180.0)
-	alt = self.alt
+        a = 6378137.0
+        e = 8.1819190842622e-2
+        pi = gpsPi
+        
+        lat = self.lat*(pi/180.0)
+        lon = self.lon*(pi/180.0)
+        alt = self.alt
 
-	n = a/sqrt((1.0-pow(e,2)*pow(sin(lat),2)))
-	x= (n+alt)*cos(lat)*cos(lon)
-	y= (n+alt)*cos(lat)*sin(lon)
-	z= (n*(1-pow(e,2))+alt)*sin(lat)
+        n = a/sqrt((1.0-pow(e,2)*pow(sin(lat),2)))
+        x= (n+alt)*cos(lat)*cos(lon)
+        y= (n+alt)*cos(lat)*sin(lon)
+        z= (n*(1-pow(e,2))+alt)*sin(lat)
 
-	return PosVector(x, y, z)
+        return PosVector(x, y, z)
 
     def distance(self, pos):
         '''return distance to another position'''
@@ -91,8 +91,8 @@ class PosVector:
         self.X = float(X)
         self.Y = float(Y)
         self.Z = float(Z)
-	# allow for some extra information to be carried in the vector
-	self.extra = extra
+        # allow for some extra information to be carried in the vector
+        self.extra = extra
 
     def __str__(self):
         return '(%.8f, %.8f, %.8f)' % (self.X, self.Y, self.Z)
@@ -124,38 +124,38 @@ class PosVector:
         import math
         if isinstance(pos2, PosLLH):
             pos2 = pos2.ToECEF()
-	llh1 = self.ToLLH()
-	llh2 = pos2.ToLLH()
-	alt = (llh1.alt + llh2.alt)*0.5
-	llh1.alt = alt
-	llh2.alt = alt
-	return llh1.distance(llh2)
+        llh1 = self.ToLLH()
+        llh2 = pos2.ToLLH()
+        alt = (llh1.alt + llh2.alt)*0.5
+        llh1.alt = alt
+        llh2.alt = alt
+        return llh1.distance(llh2)
 
     def bearing(self, pos):
-	'''return bearing between two points in degrees, in range 0-360
-	thanks to http://www.movable-type.co.uk/scripts/latlong.html'''
-	from math import sin, cos, atan2, radians, degrees
-	llh1 = self.ToLLH()
-	llh2 = pos.ToLLH()
-	
-	lat1 = radians(llh1.lat)
-	lat2 = radians(llh2.lat)
-	lon1 = radians(llh1.lon)
-	lon2 = radians(llh2.lon)
-	dLat = lat2 - lat1
-	dLon = lon2 - lon1    
-	y = sin(dLon) * cos(lat2)
-	x = cos(lat1)*sin(lat2) - sin(lat1)*cos(lat2)*cos(dLon)
-	bearing = degrees(atan2(y, x))
-	if bearing < 0:
-		bearing += 360.0
-	return bearing
+        '''return bearing between two points in degrees, in range 0-360
+        thanks to http://www.movable-type.co.uk/scripts/latlong.html'''
+        from math import sin, cos, atan2, radians, degrees
+        llh1 = self.ToLLH()
+        llh2 = pos.ToLLH()
+        
+        lat1 = radians(llh1.lat)
+        lat2 = radians(llh2.lat)
+        lon1 = radians(llh1.lon)
+        lon2 = radians(llh2.lon)
+        dLat = lat2 - lat1
+        dLon = lon2 - lon1    
+        y = sin(dLon) * cos(lat2)
+        x = cos(lat1)*sin(lat2) - sin(lat1)*cos(lat2)*cos(dLon)
+        bearing = degrees(atan2(y, x))
+        if bearing < 0:
+                bearing += 360.0
+        return bearing
 
     def offsetXY(self, pos):
         '''
-	return offset X,Y in meters to pos
-	'''
-	from math import sin, cos, radians
+        return offset X,Y in meters to pos
+        '''
+        from math import sin, cos, radians
         distance = self.distanceXY(pos)
         bearing = self.bearing(pos)
         x = distance * sin(radians(bearing))
@@ -165,22 +165,22 @@ class PosVector:
     def SagnacCorrection(self, pos2):
         '''return the Sagnac range correction. Based
            on on RTCM2.3 appendix C. Note that this is not a symmetric error!
-	   The pos2 position should be the satellite
+           The pos2 position should be the satellite
         '''
-	OMGE = 7.2921151467e-5     # earth angular velocity (IS-GPS) (rad/s)
-	return OMGE*(pos2.X * self.Y - pos2.Y * self.X) / speedOfLight
+        OMGE = 7.2921151467e-5     # earth angular velocity (IS-GPS) (rad/s)
+        return OMGE*(pos2.X * self.Y - pos2.Y * self.X) / speedOfLight
     
     def distanceSagnac(self, pos2):
         '''return distance taking into account Sagnac effect. Based
            on geodist() in rtklib. Note that this is not a symmetric distance!
-	   The pos2 position should be the satellite
+           The pos2 position should be the satellite
 
-	   Note that the Sagnac distance is an alternative to rotating
-	   the satellite positions using
-	   rangeCorrection.correctPosition(). Only one of them should
-	   be used
+           Note that the Sagnac distance is an alternative to rotating
+           the satellite positions using
+           rangeCorrection.correctPosition(). Only one of them should
+           be used
         '''
-	return self.distance(pos2) + self.SagnacCorrection(pos2)
+        return self.distance(pos2) + self.SagnacCorrection(pos2)
 
     def ToLLH(self):
         '''convert from ECEF to lat/lon/alt
@@ -242,8 +242,8 @@ def loadObject(filename):
     import pickle
     try:
         h = open(filename, mode='rb')
-	obj = pickle.load(h)
-	h.close()
-	return obj
+        obj = pickle.load(h)
+        h.close()
+        return obj
     except Exception as e:
         return None

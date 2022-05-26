@@ -393,10 +393,12 @@ class RTCMConverterThread(threading.Thread):
     def run(self):
         import subprocess
 
-        server, port, username, password, mountpoint, rtcm_callback = self._Thread__args
+        server, port, username, password, mountpoint, rtcm_callback = self._args
+        print("./ntripclient --server %s --port %d --password %s --user %s --mountpoint %s  callback= %s" % (server, port, password, username, mountpoint, str(rtcm_callback)))
 
         nt = subprocess.Popen(["./ntripclient",
                                 "--server", server,
+                                "--port", str(port),
                                 "--password", password,
                                 "--user", username,
                                 "--mountpoint", mountpoint ],
@@ -412,12 +414,17 @@ class RTCMConverterThread(threading.Thread):
             indev = nt.stdout
 
         sio = indev
+        failed_starts = 0
 
         while not self._stopevent.isSet():
             d = ord(sio.read(1))
             if d != RTCMv3_PREAMBLE:
+                failed_starts += 1
                 continue
 
+            if failed_starts > 0:
+                print("mw false bytes: %d" % (failed_starts))
+                failed_starts = 0
             pack_stream = BitStream()
 
             l1 = ord(sio.read(1))
@@ -431,16 +438,20 @@ class RTCMConverterThread(threading.Thread):
             parity = sio.read(3)
 
             if len(pkt) != pkt_len:
-                print "Length error {} {}".format(len(pkt), pkt_len)
+                print("Length error {} {}".format(len(pkt), pkt_len))
                 continue
 
             if True: #TODO check parity
                 for d in pkt:
-                    pack_stream.append(bs.pack('uint:8',ord(d)))
+                    # pack_stream.append(bs.pack('uint:8',ord(d)))
+                    pack_stream.append(bs.pack('uint:8', d))
 
-                msg = parse_rtcmv3(pack_stream)
+                # msg = parse_rtcmv3(pack_stream)
+                # pkt_type = pack_stream.read(12).uint
+                # print("mw RTCM pkg: %d" % (pkt_type))
                 # MARCO forward unchanged
-                pack_stream.append(bs.pack('3*uint:8', ord(parity[0]), ord(parity[1]), ord(parity[2])))
+                # pack_stream.append(bs.pack('3*uint:8', ord(parity[0]), ord(parity[1]), ord(parity[2])))
+                pack_stream.append(bs.pack('3*uint:8', parity[0], parity[1], parity[2]))
                 msg = struct.pack('<B', RTCMv3_PREAMBLE) + pack_stream.tobytes()
 
             if msg is not None and rtcm_callback is not None:

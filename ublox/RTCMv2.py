@@ -35,7 +35,7 @@ class RTCMBits:
 
     def reset(self):
         '''reset at the end of a message'''
-        self.buf = ""
+        self.buf = bytes()
         self.rtcbits = 0
         self.rtcword = 0
 
@@ -156,8 +156,8 @@ class RTCMBits:
         if lastpos is None:
             lastpos = util.PosVector(0,0,0)
         if len(pranges) >= 4:
-            print pranges
-            print satinfo.prCorrected
+            print(pranges)
+            print(satinfo.prCorrected)
             satinfo.rtcm_position = positionEstimate.positionLeastSquares_ranges(satinfo, pranges, lastpos, 0)
 
 
@@ -324,7 +324,7 @@ class RTCMBits:
         while self.rtcbits != 0:
             self.addbits(8, 0xAA) # pad unused bits with 0xAA
         print("MSG: bitlength=%u wordlength=%u len=%u" % (bitlength, wordlength, len(self.buf)))
-        return self.buf + "\r\n"
+        return self.buf + b"\r\n"
 
 
     def RTCMType3(self, satinfo):
@@ -393,7 +393,7 @@ class RTCMBits:
 
         while self.rtcbits != 0:
             self.addbits(8, 0xAA) # pad unused bits with 0xAA
-        return self.buf + "\n\r"
+        return self.buf + b"\n\r"
 
 
 def generateRTCM2_Message1(satinfo, maxsats=32):

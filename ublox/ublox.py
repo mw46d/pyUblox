@@ -244,9 +244,9 @@ class UbloxConfigKV:
 
     @classmethod
     def pack(cls, kv_array):
-        ret = ''
+        ret = bytes()
         for kv in kv_array:
-            n = kv.keys()[0]
+            n = list(kv.keys())[0]
             v = kv[n]
             i = cls.name_hash[n]
             ret += struct.pack('<I', i.key)
@@ -1032,7 +1032,7 @@ class UBloxDescriptor:
             msg_class = msg.msg_class()
         if msg_id is None:
             msg_id = msg.msg_id()
-        msg._buf = ''
+        msg._buf = bytes()
 
         fields = self.fields[:]
         for f in fields:
@@ -1162,11 +1162,12 @@ msg_types = {
                                                   '<Iiiibb',
                                                   ['iTOW', 'East', 'North', 'Alt', 'Zone', 'Hem']),
     (CLASS_NAV, MSG_NAV_PVT)  :   UBloxDescriptor('NAV_PVT',
-                                                  '<IHBBBBBBIiBBBBiiiiIIiiiiiIIH6Bi4B',
+                                                  '<IHBBBBBB' + 'IiBBBBii' + 'iiIIiiii' + 'iIIHH4Bih' + 'H',
                                                   ['iTOW', 'year', 'month', 'day', 'hour', 'min', 'sec', 'valid',
-                                                   'tAcc', 'nano', 'fixType', 'flags', 'flags2', 'numSV', 'lon',
-                                                   'lat', 'height', 'hMSL', 'hAcc', 'vAcc', 'velN', 'velE', 'velD', 'gSpeed',
-                                                   'headMot', 'sAcc', 'headAcc', 'pDOP', 'reserved1[6]', 'headVeh', 'reserved2[4]']),
+                                                   'tAcc', 'nano', 'fixType', 'flags', 'flags2', 'numSV', 'lon', 'lat',
+                                                   'height', 'hMSL', 'hAcc', 'vAcc', 'velN', 'velE', 'velD', 'gSpeed',
+                                                   'headMot', 'sAcc', 'headAcc', 'pDOP', 'flags3', 'reserved0[4]', 'headVeh', 'magDec',
+                                                   'magAcc' ]),
     (CLASS_NAV, MSG_NAV_SAT):     UBloxDescriptor('NAV_SAT',
                                                   '<IBBH',
                                                   ['iTOW', 'version', 'numSvs', 'reserved1'],
