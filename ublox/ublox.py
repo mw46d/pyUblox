@@ -1531,7 +1531,8 @@ else:
                 raise UbloxError('INVALID MESSAGE')
             type = self.msg_type()
             if not type in msg_types:
-                raise UBloxError('Unknown message %s length=%u' % (str(type), len(self._buf)))
+                # raise UBloxError('Unknown message %s length=%u' % (str(type), len(self._buf)))
+                return "UNKN(" + (str(type) + ", " + str(len(self._buf))) + ")"
             return msg_types[type].name
 
         def msg_class(self):
@@ -1696,6 +1697,8 @@ class UBlox:
 
     def write(self, buf):
         '''write some bytes'''
+        if isinstance(buf, str):
+            buf = buf.encode('utf-8')
         if not self.read_only:
             if self.use_sendrecv:
                 return self.dev.send(buf)
@@ -1713,7 +1716,7 @@ class UBlox:
 
     def send_nmea(self, msg):
         if not self.read_only:
-            s = msg + "*%02X" % self.nmea_checksum(msg)
+            s = msg + "*%02X\r\n" % self.nmea_checksum(msg)
             self.write(s)
 
     def set_binary(self):
@@ -1805,6 +1808,8 @@ class UBlox:
 
     def send_message(self, msg_class, msg_id, payload):
         '''send a ublox message with class, id and payload'''
+        if isinstance(payload, str):
+            payload = payload.encode('utf-8')
         msg = UBloxMessage()
         msg._buf = struct.pack('<BBBBH', 0xb5, 0x62, msg_class, msg_id, len(payload))
         msg._buf += payload
@@ -1860,14 +1865,13 @@ class UBlox:
         payload = struct.pack('<HBB', set, mode, 0)
         self.send_message(CLASS_CFG, MSG_CFG_RST, payload)
 
+    def configure_ublox_kv(self, payload):
+        payload1 = struct.pack('<BBh', 0, 1, 0)
+        payload1 += payload
+        self.send_message(CLASS_CFG, MSG_CFG_VALSET, payload1)
+
     def configure_ublox_usb_out(self, value):
-        b = UbloxConfigKV.pack([{ 'CFG_USBOUTPROT_UBX': value }])
-        payload = struct.pack('<BBh', 0, 1, 0)
-        payload += b
-        self.send_message(CLASS_CFG, MSG_CFG_VALSET, payload)
+        self.configure_ublox_kv(UbloxConfigKV.pack([{ 'CFG_USBOUTPROT_UBX': value }]))
 
     def configure_ublox_usb_sat(self, value):
-        b = UbloxConfigKV.pack([{ 'CFG_MSGOUT_UBX_NAV_SAT_USB': value }])
-        payload = struct.pack('<BBh', 0, 1, 0)
-        payload += b
-        self.send_message(CLASS_CFG, MSG_CFG_VALSET, payload)
+        self.configure_ublox_kv(UbloxConfigKV.pack([{ 'CFG_MSGOUT_UBX_NAV_SAT_USB': value }]))

@@ -6,10 +6,12 @@ import sys
 from pylab import *
 
 dev = ublox.UBlox(sys.argv[1])
+dev.configure_ublox_usb_sat(True)
 
 raw = []
 svi = []
 pos = []
+sat = []
 
 while True:
     msg = dev.receive_message()
@@ -18,8 +20,9 @@ while True:
         break
 
     n = msg.name()
+    print(n)
 
-    if n not in ['RXM_RAW', 'NAV_SVINFO']:
+    if n not in ['RXM_RAW', 'NAV_SVINFO', 'NAV_SAT']:
         continue
 
     msg.unpack()
@@ -36,6 +39,15 @@ while True:
                 c += 1
 
         pos.append(c)
+    elif n == 'NAV_SAT':
+        sat.append(msg.numSvs)
+
+        c = 0
+        for s in msg.recs:
+            if s.flags & 0x08 == 0x08:
+                c += 1
+        pos.append(c)
+        print('Sats: %d, Used: %d' % (msg.numSvs, c))
 
 plot(raw, label="Raw")
 plot(svi, label="SVI")
