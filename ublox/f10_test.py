@@ -21,11 +21,26 @@ parser.add_option("--show", action='store_true', default=False, help='show messa
 for f in args:
     print('Testing %s' % f)
     dev = ublox.UBlox(f, baudrate = opts.baudrate)
-    dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_UART1OUTPROT_UBX': True }]))
-    dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_UART1OUTPROT_NMEA': False }]))
-    dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_MSGOUT_UBX_NAV_SAT_UART1': True }]))
-    dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_MSGOUT_UBX_NAV_POSLLH_UART1': True }]))
-    dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_MSGOUT_UBX_NAV_DOP_UART1': True }]))
+    if True:
+        dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_UART1OUTPROT_UBX': True }]))
+        dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_UART1OUTPROT_NMEA': False }]))
+        dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_MSGOUT_UBX_NAV_SAT_UART1': True }]))
+        dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_MSGOUT_UBX_NAV_POSLLH_UART1': True }]))
+        dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_MSGOUT_UBX_NAV_DOP_UART1': True }]))
+    else:
+        # Just a way to configure things
+        dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_UART1OUTPROT_UBX': False }]))
+        dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_UART1OUTPROT_NMEA': True }]))
+        dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_MSGOUT_NMEA_ID_GGA_UART1': 1 }]))
+        dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_MSGOUT_NMEA_ID_GST_UART1': 1 }]))
+        dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_MSGOUT_NMEA_ID_RMC_UART1': 1 }]))
+        dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_MSGOUT_NMEA_ID_VTG_UART1': 1 }]))
+
+        dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_MSGOUT_NMEA_ID_GLL_UART1': 0 }]))
+        dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_MSGOUT_NMEA_ID_GSA_UART1': 0 }]))
+        dev.configure_ublox_kv(ublox.UbloxConfigKV.pack([{ 'CFG_MSGOUT_NMEA_ID_GSV_UART1': 0 }]))
+        sys.exit(0)
+
     count = 0
     while True:
         msg = dev.receive_message(ignore_eof=opts.follow)

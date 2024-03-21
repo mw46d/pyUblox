@@ -1699,6 +1699,8 @@ class UBlox:
         '''write some bytes'''
         if isinstance(buf, str):
             buf = buf.encode('utf-8')
+        # with open("/tmp/mw_binary.log", "a+b") as f:
+        #     f.write(buf)
         if not self.read_only:
             if self.use_sendrecv:
                 return self.dev.send(buf)
